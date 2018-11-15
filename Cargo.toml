@@ -1,0 +1,16 @@
+[package]
+name = "bert_tokenizer"
+version = "0.1.0"
+authors = ["mklf <golifang1234@gmail.com>"]
+
+[lib]
+name = "bert_tokenizer"
+path = "src/lib.rs"
+
+[[bin]]
+name = "bert_tokenizer"
+path = "src/main.rs"
+
+[dependencies]
+unicode-normalization = "0.1.7"
+unicode_categories = "*"
