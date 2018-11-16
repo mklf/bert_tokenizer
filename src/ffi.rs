@@ -2,6 +2,9 @@ use super::FullTokenizer;
 use std::ffi::CStr;
 use std::os::raw::{c_void,c_char,c_int};
 use std::mem;
+
+
+
 #[no_mangle]
 pub fn create_full_tokenizer(vocab_file:*const c_char,do_lower_case:c_int)->*mut c_void{
     let vocab_file = unsafe { CStr::from_ptr(vocab_file)};
@@ -28,5 +31,7 @@ pub fn convert_to_ids(tokenizer:*mut c_void, text:*const c_char,output_len:*mut 
 
 #[no_mangle]
 pub fn drop_ids(ids_ptr:*mut c_int,len :c_int){
-    let ids = unsafe {Vec::from_raw_parts(ids_ptr,len as usize, len as usize)};
+    let _ids = unsafe {Vec::from_raw_parts(ids_ptr,len as usize, len as usize)};
 }
+
+

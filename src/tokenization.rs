@@ -6,7 +6,7 @@ use unicode_categories::UnicodeCategories;
 use unicode_normalization::UnicodeNormalization;
 use indexmap::IndexMap;
 
-
+use super::{SEGMENT_IDS,INPUT_IDS,INPUT_MASK};
 
 
 
@@ -195,12 +195,57 @@ impl WordpieceTokenizer {
         return output_tokens;
 
     }
+    /*
+    pub fn tokenize_to_ids<T: AsRef<str>>(&self, text: T)->Vec<i32> {
+        let mut output_tokens = Vec::new();
+        for token in text.as_ref().split_whitespace(){
+            let chars :Vec<char>= token.chars().collect();
+            if chars.len() > self.max_input_chars_per_word{
+                output_tokens.push(self.unk_token.clone());
+                continue
+            }
+            let mut is_bad = false;
+            let mut start = 0;
+            let mut sub_tokens = Vec::new();
+            while start < chars.len(){
+                let mut end = chars.len();
+                let mut cur_substr = -1;
+                while start < end{
+                    let mut substr :String = chars[start..end].iter().collect();
+                    if start > 0{
+                        substr = "##".to_string() + &substr;
+                    }
+                    if let Some(val) = self.vocab.get(&substr){
+                        cur_substr = val as i32;
+                        break;
+                    }
+                    end -=1;
+                }
+                if cur_substr.len() == 0{
+                    is_bad = true;
+                    break;
+                }
+                sub_tokens.push(cur_substr);
+                start = end;
+            }
+            if is_bad{
+                output_tokens.push(self.unk_token.clone());
+            }else{
+                output_tokens.append(&mut sub_tokens);
+            }
+        }
+        return output_tokens;
+
+    }
+    */
 }
 
 
 pub struct FullTokenizer {
     basic_tokenizer: BasicTokenizer,
     wordpiece_tokenizer: WordpieceTokenizer,
+    cls_token_id : usize,
+    sep_token_id : usize
 }
 
 
@@ -242,11 +287,19 @@ impl FullTokenizer {
 
         let (vocab,inv_vocab) = FullTokenizer::load_vocab(vocab_file)?;
 
+        if  !vocab.contains_key("[CLS]") || !vocab.contains_key("[SEP]"){
+            return Err("".into());
+        }
+
+        let cls_token_id = *vocab.get("[CLS]").unwrap();
+        let sep_token_id = *vocab.get("[SEP]").unwrap();
         let wordpiece_tokenizer = WordpieceTokenizer::new(vocab, inv_vocab,"[UNK]", 100);
 
         Ok(FullTokenizer {
             basic_tokenizer,
             wordpiece_tokenizer,
+            cls_token_id,
+            sep_token_id
         })
     }
 
@@ -281,29 +334,67 @@ impl FullTokenizer {
 
     }
 
-    pub fn convert_pairs<T:AsRef<str>>(&self,text_a:T,text_b:T,max_seq_len :usize){
+    pub fn convert_pairs<T:AsRef<str>>(&self,text_a:T,text_b:T,max_seq_len :usize)->(Vec<usize>){
         let mut tokens_a = self.tokenize(text_a);
         let mut tokens_b = self.tokenize(text_b);
         Self::truncate_seq_pair(&mut tokens_a,&mut tokens_b,max_seq_len-3);
 
         let mut tokens = vec!["[CLS]".to_string()];
-        let mut segment_ids = vec![0];
+        //let mut segment_ids = vec![0];
+        SEGMENT_IDS.with(|segment_ids|{
+            let mut segment_ids = segment_ids.borrow_mut();
+            segment_ids.clear();
+            segment_ids.reserve(max_seq_len);
+            // + CLS && [SEP]
+            for _ in 0..tokens_a.len()+2{
+                segment_ids.push(0);
+            }
+            // +[SEP]
+            for _ in 0..tokens_b.len()+1{
+                segment_ids.push(1);
+            }
+
+            while segment_ids.len() < max_seq_len{
+                segment_ids.push(0);
+            }
+        });
+
+        INPUT_MASK.with(|input_mask|{
+            let mut input_mask = input_mask.borrow_mut();
+            input_mask.clear();
+            input_mask.reserve(max_seq_len);
+            // CLS + [SEP]*2
+            for _ in 0.. tokens_a.len()+tokens_b.len()+3{
+                input_mask.push(1);
+            }
+            while input_mask.len() < max_seq_len{
+                input_mask.push(0);
+            }
+        });
+
+
         for token in tokens_a {
             tokens.push(token);
-            segment_ids.push(0);
         }
         tokens.push("[SEP]".to_string());
-        segment_ids.push(0);
 
         for token in tokens_b {
             tokens.push(token);
-            segment_ids.push(1);
+            //segment_ids.push(1);
         }
         tokens.push("[SEP]".to_string());
-        segment_ids.push(1);
+        //segment_ids.push(1);
 
-        let input_ids = self.convert_tokens_to_ids(&tokens);
+        let mut input_ids = self.convert_tokens_to_ids(&tokens);
 
+        input_ids.reserve(max_seq_len);
+        //segment_ids.reserve(max_seq_len);
+
+        while input_ids.len() < max_seq_len{
+            input_ids.push(0);
+            //segment_ids.push(0);
+        }
+        (input_ids)
     }
 }
 
