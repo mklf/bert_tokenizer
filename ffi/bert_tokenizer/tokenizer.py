@@ -44,7 +44,7 @@ _get_error = _lib.get_error
 _get_error.restype = ctypes.c_char_p
 
 PY3 = False
-if (sys.version_info > (3, 0)):
+if sys.version_info > (3, 0):
     PY3 = True
 
 

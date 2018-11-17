@@ -1,3 +1,3 @@
 # -*- coding:utf-8 -*-
 
-from .lib import FullTokenizer
+from .tokenizer import FullTokenizer
