@@ -6,7 +6,7 @@ authors = ["mklf <golifang1234@gmail.com>"]
 [lib]
 name = "bert_tokenizer"
 path = "src/lib.rs"
-crate-type= ["staticlib","rlib"]
+crate-type= ["cdylib"]
 
 
 [[bin]]

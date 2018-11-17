@@ -6,6 +6,7 @@ use unicode_categories::UnicodeCategories;
 use unicode_normalization::UnicodeNormalization;
 use indexmap::IndexMap;
 
+
 use super::{SEGMENT_IDS,INPUT_IDS,INPUT_MASK};
 
 
@@ -112,7 +113,6 @@ impl BasicTokenizer {
 
     pub fn tokenize<T>(&self, text: T) -> Vec<String> where T: AsRef<str> {
         let text = text.as_ref();
-
         let text = self._clean_text(text);
 
         let text = self._tokenize_chinese_chars(text);
@@ -139,16 +139,19 @@ struct WordpieceTokenizer {
     vocab: IndexMap<String, usize>,
     inv_vocab:IndexMap<usize,String>,
     unk_token: String,
+    unk_id : usize,
     max_input_chars_per_word: usize,
 }
 
 impl WordpieceTokenizer {
     pub fn new<T: AsRef<str>>(vocab: IndexMap<String, usize>, inv_vocab:IndexMap<usize,String>,
                               unk_token: T, max_input_chars_per_word: usize) -> WordpieceTokenizer {
+        let unk_id = vocab[unk_token.as_ref()];
         // RFC 1682
         WordpieceTokenizer {
             vocab,
             inv_vocab,
+            unk_id,
             unk_token: unk_token.as_ref().to_string(),
             max_input_chars_per_word,
         }
@@ -195,13 +198,14 @@ impl WordpieceTokenizer {
         return output_tokens;
 
     }
-    /*
+
     pub fn tokenize_to_ids<T: AsRef<str>>(&self, text: T)->Vec<i32> {
         let mut output_tokens = Vec::new();
+
         for token in text.as_ref().split_whitespace(){
             let chars :Vec<char>= token.chars().collect();
             if chars.len() > self.max_input_chars_per_word{
-                output_tokens.push(self.unk_token.clone());
+                output_tokens.push(self.unk_id as i32);
                 continue
             }
             let mut is_bad = false;
@@ -216,12 +220,12 @@ impl WordpieceTokenizer {
                         substr = "##".to_string() + &substr;
                     }
                     if let Some(val) = self.vocab.get(&substr){
-                        cur_substr = val as i32;
+                        cur_substr = *val as i32;
                         break;
                     }
                     end -=1;
                 }
-                if cur_substr.len() == 0{
+                if cur_substr == -1{
                     is_bad = true;
                     break;
                 }
@@ -229,7 +233,7 @@ impl WordpieceTokenizer {
                 start = end;
             }
             if is_bad{
-                output_tokens.push(self.unk_token.clone());
+                output_tokens.push(self.unk_id as i32);
             }else{
                 output_tokens.append(&mut sub_tokens);
             }
@@ -237,7 +241,7 @@ impl WordpieceTokenizer {
         return output_tokens;
 
     }
-    */
+
 }
 
 
@@ -287,8 +291,9 @@ impl FullTokenizer {
 
         let (vocab,inv_vocab) = FullTokenizer::load_vocab(vocab_file)?;
 
-        if  !vocab.contains_key("[CLS]") || !vocab.contains_key("[SEP]"){
-            return Err("".into());
+        if  !vocab.contains_key("[CLS]") ||
+            !vocab.contains_key("[SEP]") || !vocab.contains_key("[UNK]"){
+            return Err("`[CLS]` or `[SEP]` or `[UNK]` not in vocab".into());
         }
 
         let cls_token_id = *vocab.get("[CLS]").unwrap();
@@ -311,6 +316,14 @@ impl FullTokenizer {
         split_tokens
     }
 
+    pub fn tokenize_to_ids<T:AsRef<str>>(&self, text :T) -> Vec<i32>{
+        let mut split_tokens = Vec::new();
+        for token in self.basic_tokenizer.tokenize(text) {
+            split_tokens.append(&mut self.wordpiece_tokenizer.tokenize_to_ids(token));
+        }
+        split_tokens
+    }
+
     pub fn convert_tokens_to_ids(&self,tokens : &[String])->Vec<usize>{
         convert_tokens_to_ids(&self.wordpiece_tokenizer.vocab,tokens)
     }
@@ -319,7 +332,7 @@ impl FullTokenizer {
         convert_ids_to_tokens(&self.wordpiece_tokenizer.inv_vocab,ids)
     }
 
-    fn truncate_seq_pair(tokens_a:&mut Vec<String>,tokens_b:&mut Vec<String>,max_length:usize){
+    fn truncate_seq_pair<T>(tokens_a:&mut Vec<T>,tokens_b:&mut Vec<T>,max_length:usize){
         loop {
             if tokens_a.len() + tokens_b.len() <= max_length{
                 break;
@@ -334,12 +347,11 @@ impl FullTokenizer {
 
     }
 
-    pub fn convert_pairs<T:AsRef<str>>(&self,text_a:T,text_b:T,max_seq_len :usize)->(Vec<usize>){
-        let mut tokens_a = self.tokenize(text_a);
-        let mut tokens_b = self.tokenize(text_b);
+    pub fn convert_pairs<T:AsRef<str>>(&self,text_a:T,text_b:T,max_seq_len :usize){
+        let mut tokens_a = self.tokenize_to_ids(text_a);
+        let mut tokens_b = self.tokenize_to_ids(text_b);
         Self::truncate_seq_pair(&mut tokens_a,&mut tokens_b,max_seq_len-3);
 
-        let mut tokens = vec!["[CLS]".to_string()];
         //let mut segment_ids = vec![0];
         SEGMENT_IDS.with(|segment_ids|{
             let mut segment_ids = segment_ids.borrow_mut();
@@ -372,30 +384,24 @@ impl FullTokenizer {
             }
         });
 
+        INPUT_IDS.with(|input_ids|{
+           let mut input_ids = input_ids.borrow_mut();
+            input_ids.clear();
+            input_ids.reserve(max_seq_len);
+            input_ids.push(self.cls_token_id as i32);
 
-        for token in tokens_a {
-            tokens.push(token);
-        }
-        tokens.push("[SEP]".to_string());
+            input_ids.append(&mut tokens_a);
+            input_ids.push(self.sep_token_id as i32);
 
-        for token in tokens_b {
-            tokens.push(token);
-            //segment_ids.push(1);
-        }
-        tokens.push("[SEP]".to_string());
-        //segment_ids.push(1);
+            input_ids.append(&mut tokens_b);
+            input_ids.push(self.sep_token_id as i32);
 
-        let mut input_ids = self.convert_tokens_to_ids(&tokens);
-
-        input_ids.reserve(max_seq_len);
-        //segment_ids.reserve(max_seq_len);
-
-        while input_ids.len() < max_seq_len{
-            input_ids.push(0);
-            //segment_ids.push(0);
-        }
-        (input_ids)
+            while input_ids.len() < max_seq_len{
+                input_ids.push(0);
+            }
+        });
     }
+
 }
 
 #[cfg(test)]
