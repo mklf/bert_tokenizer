@@ -87,8 +87,8 @@ class FullTokenizer(object):
         _convert_pairs(self.handle, text_a, text_b, ctypes.c_int(max_seq_len))
         input_ids = _get_input_ids()[:max_seq_len]
         input_mask = _get_input_mask()[:max_seq_len]
-        segmet_ids = _get_segment_ids()[:max_seq_len]
-        return input_ids, input_mask, segmet_ids
+        segment_ids = _get_segment_ids()[:max_seq_len]
+        return input_ids, input_mask, segment_ids
 
     def __del__(self):
         _drop_tokenizer(self.handle)

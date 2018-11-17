@@ -8,7 +8,7 @@ setuptools.setup(
     author_email="golifang1234@gmail.com",
     description="A Tokenizer for Bert model",
     packages=setuptools.find_packages(),
-    package_data={'':["*.py","*.so","*.dylib"]},
+    package_data={'':["*.py","*.so","*.dylib","*.dll"]},
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 2",
