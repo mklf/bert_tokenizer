@@ -9,9 +9,9 @@ path = "src/lib.rs"
 crate-type= ["cdylib"]
 
 
-[[bin]]
-name = "bert_tokenizer"
-path = "src/main.rs"
+#[[bin]]
+#name = "bert_tokenizer"
+#path = "src/main.rs"
 
 [dependencies]
 unicode-normalization = "0.1.7"
