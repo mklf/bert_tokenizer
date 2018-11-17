@@ -3,7 +3,7 @@ import setuptools
 
 setuptools.setup(
     name="bert_tokenizer",
-    version="0.1.3",
+    version="0.1.4",
     author="Li Fang",
     author_email="golifang1234@gmail.com",
     description="A Tokenizer for Bert model",
