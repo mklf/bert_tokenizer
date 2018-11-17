@@ -5,14 +5,13 @@ import sys
 
 suffix = {
     "linux":".so",
-    #"win32":".dll",
+    "win32":".dll",
     "darwin":".dylib"
 }
 if sys.platform not in suffix:
     raise NotImplementedError("platform not support now (linux/macosx)")
 
 libpath = path.join(path.dirname(__file__),"libbert_tokenizer"+suffix[sys.platform])
-
 _lib = ctypes.CDLL(libpath)
 
 _create_full_tokenizer = _lib.create_full_tokenizer
