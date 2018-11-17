@@ -5,11 +5,11 @@ import sys
 
 suffix = {
     "linux":".so",
-    "win32":".dll",
+    #"win32":".dll",
     "darwin":".dylib"
 }
 if sys.platform not in suffix:
-    raise NotImplementedError("platform not support, support: {}".format(suffix.keys()))
+    raise NotImplementedError("platform not support now (linux/macosx)")
 
 libpath = path.join(path.dirname(__file__),"libbert_tokenizer"+suffix[sys.platform])
 
