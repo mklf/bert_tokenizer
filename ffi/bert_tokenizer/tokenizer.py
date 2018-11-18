@@ -15,7 +15,7 @@ if platform.startswith("linux"):
     platform = 'linux'
 
 if platform not in suffix:
-    raise NotImplementedError("platform not support now (linux/macosx)")
+    raise NotImplementedError("platform not support now (windows/linux/macosx)")
 
 libpath = path.join(path.dirname(__file__), "libbert_tokenizer" + suffix[platform])
 _lib = ctypes.CDLL(libpath)
@@ -71,10 +71,10 @@ class TokenizerError(Exception):
 
 
 class FullTokenizer(object):
-    def __init__(self, vocab_file):
+    def __init__(self, vocab_file,do_lower_case=True):
         vocab_file = conver_to_bytes(vocab_file)
         vocab_file = ctypes.c_char_p(vocab_file)
-        self.handle = _create_full_tokenizer(vocab_file, 1)
+        self.handle = _create_full_tokenizer(vocab_file, int(do_lower_case))
         if self.handle is None:
             error_msg = _get_error().decode('utf8')
             raise TokenizerError(error_msg)
