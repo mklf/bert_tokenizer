@@ -1,2 +1,9 @@
 /target
 **/*.rs.bk
+.ipynb*
+*.egg-info*
+*.pyc
+__pycache__
+ffi/build
+ffi/dist
+.idea/
