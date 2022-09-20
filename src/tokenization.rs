@@ -204,13 +204,13 @@ impl WordpieceTokenizer {
         return output_tokens;
     }
 
-    pub fn tokenize_to_ids<T: AsRef<str>>(&self, text: T) -> Vec<i64> {
+    pub fn tokenize_to_ids<T: AsRef<str>>(&self, text: T) -> Vec<i32> {
         let mut output_tokens = Vec::new();
 
         for token in text.as_ref().split_whitespace() {
             let chars: Vec<char> = token.chars().collect();
             if chars.len() > self.max_input_chars_per_word {
-                output_tokens.push(self.unk_id as i64);
+                output_tokens.push(self.unk_id as i32);
                 continue;
             }
             let mut is_bad = false;
@@ -225,7 +225,7 @@ impl WordpieceTokenizer {
                         substr = "##".to_string() + &substr;
                     }
                     if let Some(val) = self.vocab.get(&substr) {
-                        cur_substr = *val as i64;
+                        cur_substr = *val as i32;
                         break;
                     }
                     end -= 1;
@@ -238,7 +238,7 @@ impl WordpieceTokenizer {
                 start = end;
             }
             if is_bad {
-                output_tokens.push(self.unk_id as i64);
+                output_tokens.push(self.unk_id as i32);
             } else {
                 output_tokens.append(&mut sub_tokens);
             }
@@ -324,7 +324,7 @@ impl FullTokenizer {
         split_tokens
     }
 
-    pub fn tokenize_to_ids<T: AsRef<str>>(&self, text: T) -> Vec<i64> {
+    pub fn tokenize_to_ids<T: AsRef<str>>(&self, text: T) -> Vec<i32> {
         let mut split_tokens = Vec::new();
         for token in self.basic_tokenizer.tokenize(text) {
             split_tokens.append(&mut self.wordpiece_tokenizer.tokenize_to_ids(token));
@@ -363,6 +363,7 @@ impl FullTokenizer {
         let mut tokens_a = self.tokenize_to_ids(text_a);
         let mut tokens_b = self.tokenize_to_ids(text_b);
         let pair = is_pair as usize;
+
         let added_tokens = 2 + pair;
         let max_seq_len = {
             if max_seq_len == 0 {
@@ -410,14 +411,14 @@ impl FullTokenizer {
             let mut input_ids = input_ids.borrow_mut();
             input_ids.clear();
             input_ids.reserve(max_seq_len);
-            input_ids.push(self.cls_token_id as i64);
+            input_ids.push(self.cls_token_id as _);
 
             input_ids.append(&mut tokens_a);
-            input_ids.push(self.sep_token_id as i64);
+            input_ids.push(self.sep_token_id as _);
 
             if is_pair {
                 input_ids.append(&mut tokens_b);
-                input_ids.push(self.sep_token_id as i64);
+                input_ids.push(self.sep_token_id as _);
             }
 
             while input_ids.len() < max_seq_len {

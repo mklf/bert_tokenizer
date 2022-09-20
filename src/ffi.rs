@@ -81,6 +81,7 @@ pub fn convert_pairs(
     let text_a = unsafe { CStr::from_ptr(text_a) }.to_string_lossy();
     let text_b = unsafe { CStr::from_ptr(text_b) }.to_string_lossy();
 
+
     let seq_len = tokenizer.convert_pairs(
         text_a.as_ref(),
         text_b.as_ref(),
@@ -91,8 +92,8 @@ pub fn convert_pairs(
 }
 
 #[no_mangle]
-pub fn get_input_ids() -> *mut i64 {
-    let mut input_ids_ptr: *mut i64 = ptr::null_mut();
+pub fn get_input_ids() -> *mut i32 {
+    let mut input_ids_ptr: *mut i32 = ptr::null_mut();
     INPUT_IDS.with(|input_ids| {
         input_ids_ptr = input_ids.borrow_mut().as_mut_ptr();
     });
@@ -100,8 +101,8 @@ pub fn get_input_ids() -> *mut i64 {
 }
 
 #[no_mangle]
-pub fn get_input_mask() -> *mut i64 {
-    let mut input_mask_ptr: *mut i64 = ptr::null_mut();
+pub fn get_input_mask() -> *mut i32 {
+    let mut input_mask_ptr: *mut i32 = ptr::null_mut();
     INPUT_MASK.with(|input_mask| {
         input_mask_ptr = input_mask.borrow_mut().as_mut_ptr();
     });
@@ -109,8 +110,8 @@ pub fn get_input_mask() -> *mut i64 {
 }
 
 #[no_mangle]
-pub fn get_segment_ids() -> *mut i64 {
-    let mut segment_ids_ptr: *mut i64 = ptr::null_mut();
+pub fn get_segment_ids() -> *mut i32 {
+    let mut segment_ids_ptr: *mut i32 = ptr::null_mut();
     SEGMENT_IDS.with(|segment_ids| {
         segment_ids_ptr = segment_ids.borrow_mut().as_mut_ptr();
     });
@@ -123,7 +124,7 @@ mod test {
     #[test]
     fn pipeline() {
         let tokenizer = FullTokenizer::new("vocab.txt", true).unwrap();
-        let len = tokenizer.convert_pairs("你好", "", 0, false);
+        let len = tokenizer.convert_pairs("你好帅","你好你好你好", 0, true);
         unsafe {
             let input_ids = std::slice::from_raw_parts(get_input_ids(), len);
             let token_type_ids = std::slice::from_raw_parts(get_segment_ids(), len);

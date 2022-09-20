@@ -5,9 +5,9 @@ use std::cell::RefCell;
 use std::ffi::CString;
 
 thread_local! {
-    pub static INPUT_IDS : RefCell<Vec<i64>> = RefCell::new(Vec::new());
-    pub static INPUT_MASK: RefCell<Vec<i64>> = RefCell::new(Vec::new());
-    pub static SEGMENT_IDS:RefCell<Vec<i64>> = RefCell::new(Vec::new());
+    pub static INPUT_IDS : RefCell<Vec<i32>> = RefCell::new(Vec::new());
+    pub static INPUT_MASK: RefCell<Vec<i32>> = RefCell::new(Vec::new());
+    pub static SEGMENT_IDS:RefCell<Vec<i32>> = RefCell::new(Vec::new());
     pub static ERROR_MSG : RefCell<CString> = RefCell::new(CString::new("").unwrap());
 }
 
