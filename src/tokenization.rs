@@ -1,11 +1,7 @@
 use indexmap::IndexMap;
 use std::error::Error;
-use std::fs::File;
-use std::io::prelude::*;
-use std::io::BufReader;
 use unicode_categories::UnicodeCategories;
 use unicode_normalization::UnicodeNormalization;
-
 use super::{INPUT_IDS, INPUT_MASK, SEGMENT_IDS};
 
 pub struct BasicTokenizer {
@@ -266,36 +262,28 @@ pub fn convert_ids_to_tokens(vocab: &IndexMap<usize, String>, ids: &[usize]) -> 
 }
 
 impl FullTokenizer {
-    fn load_vocab<T: AsRef<str>>(
-        vocab_file: T,
-    ) -> Result<(IndexMap<String, usize>, IndexMap<usize, String>), Box<dyn Error>> {
-        let file = File::open(vocab_file.as_ref())?;
-        let mut reader = BufReader::with_capacity(4096, file);
-        let mut buffer: Vec<u8> = Vec::with_capacity(1024);
-
+    fn load_vocab() -> Result<(IndexMap<String, usize>, IndexMap<usize, String>), Box<dyn Error>> {
+        let raw_vocab_str = include_bytes!("../vocab.txt");
         let mut vocab = IndexMap::new();
         let mut inv_vocab = IndexMap::new();
         let mut index: usize = 0;
-        while reader.read_until(b'\n', &mut buffer)? > 0 {
+
+        for buffer in raw_vocab_str.split(|u| *u == b'\n') {
             {
                 let token = String::from_utf8_lossy(&buffer).trim().to_string();
                 vocab.insert(token.clone(), index);
                 inv_vocab.insert(index, token);
                 index += 1;
             }
-            buffer.clear();
         }
 
         Ok((vocab, inv_vocab))
     }
 
-    pub fn new<T: AsRef<str>>(
-        vocab_file: T,
-        do_lower_case: bool,
-    ) -> Result<FullTokenizer, Box<dyn Error>> {
+    pub fn new(do_lower_case: bool) -> Result<FullTokenizer, Box<dyn Error>> {
         let basic_tokenizer = BasicTokenizer::new(do_lower_case);
 
-        let (vocab, inv_vocab) = FullTokenizer::load_vocab(vocab_file)?;
+        let (vocab, inv_vocab) = FullTokenizer::load_vocab()?;
 
         if !vocab.contains_key("[CLS]")
             || !vocab.contains_key("[SEP]")
@@ -554,5 +542,7 @@ mod test {
     }
 
     #[test]
-    fn test_full_tokenizer() {}
+    fn test_full_tokenizer() {
+
+    }
 }

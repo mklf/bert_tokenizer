@@ -21,7 +21,7 @@ libpath = path.join(path.dirname(__file__), "libbert_tokenizer" + suffix[platfor
 _lib = ctypes.CDLL(libpath)
 
 _create_full_tokenizer = _lib.create_full_tokenizer
-_create_full_tokenizer.argtypes = [ctypes.c_char_p, ctypes.c_int]
+_create_full_tokenizer.argtypes = [ctypes.c_int]
 _create_full_tokenizer.restype = ctypes.c_void_p
 
 _drop_tokenizer = _lib.drop_tokenizer
@@ -71,10 +71,8 @@ class TokenizerError(Exception):
 
 
 class FullTokenizer(object):
-    def __init__(self, vocab_file,do_lower_case=True):
-        vocab_file = conver_to_bytes(vocab_file)
-        vocab_file = ctypes.c_char_p(vocab_file)
-        self.handle = _create_full_tokenizer(vocab_file, int(do_lower_case))
+    def __init__(self, do_lower_case=True):
+        self.handle = _create_full_tokenizer(int(do_lower_case))
         if self.handle is None:
             error_msg = _get_error().decode('utf8')
             raise TokenizerError(error_msg)
@@ -85,7 +83,8 @@ class FullTokenizer(object):
         text_a = ctypes.c_char_p(text_a)
         text_b = ctypes.c_char_p(text_b)
         max_seq_len = _convert_pairs(self.handle, text_a, text_b, ctypes.c_int(max_seq_len), ctypes.c_int(is_pair))
-        print(max_seq_len)
+        if max_seq_len == -1:
+            raise TokenizerError(_get_error().decode("utf8"))
         input_ids = _get_input_ids()[:max_seq_len]
         input_mask = _get_input_mask()[:max_seq_len]
         segment_ids = _get_segment_ids()[:max_seq_len]

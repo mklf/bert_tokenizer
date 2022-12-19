@@ -13,10 +13,8 @@ pub fn bert_tokenizer_get_error() -> *const c_char {
 }
 
 #[no_mangle]
-pub fn create_full_tokenizer(vocab_file: *const c_char, do_lower_case: c_int) -> *mut c_void {
-    let vocab_file = unsafe { CStr::from_ptr(vocab_file) };
-    let vocab_file = vocab_file.to_string_lossy();
-    match FullTokenizer::new(vocab_file, do_lower_case == 1) {
+pub fn create_full_tokenizer(do_lower_case: c_int) -> *mut c_void {
+    match FullTokenizer::new(do_lower_case == 1) {
         Ok(tokenizer) => {
             let tokenizer = Box::new(tokenizer);
             Box::into_raw(tokenizer) as *mut c_void
@@ -78,13 +76,44 @@ pub fn convert_pairs(
 ) -> c_int {
     let tokenizer = unsafe { &*(tokenizer as *mut FullTokenizer) };
 
-    let text_a = unsafe { CStr::from_ptr(text_a) }.to_string_lossy();
-    let text_b = unsafe { CStr::from_ptr(text_b) }.to_string_lossy();
+    let a_str = unsafe { CStr::from_ptr(text_a) };
+    let b_str = unsafe { CStr::from_ptr(text_b) };
+    let mut has_utf8_error = false;
+    let text_a = match a_str.to_str() {
+        Ok(t) => t,
+        Err(e) => {
+            has_utf8_error = true;
+            ERROR_MSG.with(|error_msg| {
+                let mut error_msg = error_msg.borrow_mut();
+                let reason = e.to_string().into_bytes();
+                *error_msg = CString::new(reason).unwrap();
+            });
+            ""
+        }
+    };
+    if has_utf8_error {
+        return -1;
+    }
 
+    let text_b = match b_str.to_str() {
+        Ok(t) => t,
+        Err(e) => {
+            has_utf8_error = true;
+            ERROR_MSG.with(|error_msg| {
+                let mut error_msg = error_msg.borrow_mut();
+                let reason = e.to_string().into_bytes();
+                *error_msg = CString::new(reason).unwrap();
+            });
+            ""
+        }
+    };
+    if has_utf8_error {
+        return -1;
+    }
 
     let seq_len = tokenizer.convert_pairs(
-        text_a.as_ref(),
-        text_b.as_ref(),
+        text_a,
+        text_b,
         max_seq_len as usize,
         is_pair == 1,
     );
@@ -123,14 +152,13 @@ mod test {
     use super::*;
     #[test]
     fn pipeline() {
-        let tokenizer = FullTokenizer::new("vocab.txt", true).unwrap();
-        let len = tokenizer.convert_pairs("你好帅","你好你好你好", 0, true);
+        let tokenizer = FullTokenizer::new(true).unwrap();
+        let len = tokenizer.convert_pairs("你好帅", "你好你好你好", 0, true);
         unsafe {
             let input_ids = std::slice::from_raw_parts(get_input_ids(), len);
             let token_type_ids = std::slice::from_raw_parts(get_segment_ids(), len);
 
             println!("{:?}", input_ids);
-            println!("{:?}", INPUT_IDS);
             println!("{:?}", token_type_ids);
         }
     }
