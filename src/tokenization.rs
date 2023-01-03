@@ -2,7 +2,6 @@ use indexmap::IndexMap;
 use std::error::Error;
 use unicode_categories::UnicodeCategories;
 use unicode_normalization::UnicodeNormalization;
-use super::{INPUT_IDS, INPUT_MASK, SEGMENT_IDS};
 
 pub struct BasicTokenizer {
     pub do_lower_case: bool,
@@ -246,8 +245,9 @@ impl WordpieceTokenizer {
 pub struct FullTokenizer {
     basic_tokenizer: BasicTokenizer,
     wordpiece_tokenizer: WordpieceTokenizer,
-    cls_token_id: usize,
-    sep_token_id: usize,
+    pub cls_token_id: usize,
+    pub sep_token_id: usize,
+    pub pad_token_id: usize
 }
 
 pub fn convert_tokens_to_ids(vocab: &IndexMap<String, usize>, tokens: &[String]) -> Vec<usize> {
@@ -294,6 +294,7 @@ impl FullTokenizer {
 
         let cls_token_id = *vocab.get("[CLS]").unwrap();
         let sep_token_id = *vocab.get("[SEP]").unwrap();
+        let pad_token_id = *vocab.get("[PAD]").unwrap();
         let wordpiece_tokenizer = WordpieceTokenizer::new(vocab, inv_vocab, "[UNK]", 100);
 
         Ok(FullTokenizer {
@@ -301,6 +302,7 @@ impl FullTokenizer {
             wordpiece_tokenizer,
             cls_token_id,
             sep_token_id,
+            pad_token_id
         })
     }
 
@@ -313,11 +315,11 @@ impl FullTokenizer {
     }
 
     pub fn tokenize_to_ids<T: AsRef<str>>(&self, text: T) -> Vec<i32> {
-        let mut split_tokens = Vec::new();
+        let mut input_ids = vec![];
         for token in self.basic_tokenizer.tokenize(text) {
-            split_tokens.append(&mut self.wordpiece_tokenizer.tokenize_to_ids(token));
+            input_ids.append(&mut self.wordpiece_tokenizer.tokenize_to_ids(token));
         }
-        split_tokens
+        input_ids
     }
 
     pub fn convert_tokens_to_ids(&self, tokens: &[String]) -> Vec<usize> {
@@ -326,94 +328,6 @@ impl FullTokenizer {
 
     pub fn convert_ids_to_tokens(&self, ids: &[usize]) -> Vec<String> {
         convert_ids_to_tokens(&self.wordpiece_tokenizer.inv_vocab, ids)
-    }
-
-    fn truncate_seq_pair<T>(tokens_a: &mut Vec<T>, tokens_b: &mut Vec<T>, max_length: usize) {
-        loop {
-            if tokens_a.len() + tokens_b.len() <= max_length {
-                break;
-            }
-            if tokens_a.len() > tokens_b.len() {
-                tokens_a.pop();
-            } else {
-                tokens_b.pop();
-            }
-        }
-    }
-
-    pub fn convert_pairs<T: AsRef<str>>(
-        &self,
-        text_a: T,
-        text_b: T,
-        max_seq_len: usize,
-        is_pair: bool,
-    ) -> usize {
-        let mut tokens_a = self.tokenize_to_ids(text_a);
-        let mut tokens_b = self.tokenize_to_ids(text_b);
-        let pair = is_pair as usize;
-
-        let added_tokens = 2 + pair;
-        let max_seq_len = {
-            if max_seq_len == 0 {
-                tokens_a.len() + tokens_b.len() + added_tokens
-            } else {
-                max_seq_len
-            }
-        };
-
-        Self::truncate_seq_pair(&mut tokens_a, &mut tokens_b, max_seq_len - added_tokens);
-
-        //let mut segment_ids = vec![0];
-        SEGMENT_IDS.with(|segment_ids| {
-            let mut segment_ids = segment_ids.borrow_mut();
-            segment_ids.clear();
-            segment_ids.reserve(max_seq_len);
-            // + CLS && [SEP]
-            for _ in 0..tokens_a.len() + 2 {
-                segment_ids.push(0);
-            }
-            // +[SEP]
-            for _ in 0..tokens_b.len() + pair {
-                segment_ids.push(1);
-            }
-
-            while segment_ids.len() < max_seq_len {
-                segment_ids.push(0);
-            }
-        });
-
-        INPUT_MASK.with(|input_mask| {
-            let mut input_mask = input_mask.borrow_mut();
-            input_mask.clear();
-            input_mask.reserve(max_seq_len);
-            // CLS + [SEP]*2
-            for _ in 0..tokens_a.len() + tokens_b.len() + added_tokens {
-                input_mask.push(1);
-            }
-            while input_mask.len() < max_seq_len {
-                input_mask.push(0);
-            }
-        });
-
-        INPUT_IDS.with(|input_ids| {
-            let mut input_ids = input_ids.borrow_mut();
-            input_ids.clear();
-            input_ids.reserve(max_seq_len);
-            input_ids.push(self.cls_token_id as _);
-
-            input_ids.append(&mut tokens_a);
-            input_ids.push(self.sep_token_id as _);
-
-            if is_pair {
-                input_ids.append(&mut tokens_b);
-                input_ids.push(self.sep_token_id as _);
-            }
-
-            while input_ids.len() < max_seq_len {
-                input_ids.push(0);
-            }
-        });
-        max_seq_len
     }
 }
 
@@ -542,7 +456,5 @@ mod test {
     }
 
     #[test]
-    fn test_full_tokenizer() {
-
-    }
+    fn test_full_tokenizer() {}
 }

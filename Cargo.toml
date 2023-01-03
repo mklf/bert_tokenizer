@@ -1,12 +1,12 @@
 [package]
-name = "bert_tokenizer"
+name = "tcsivr"
 version = "0.1.0"
 authors = ["mklf <golifang1234@gmail.com>"]
 
 [lib]
-name = "bert_tokenizer"
+name = "tcsivr"
 path = "src/lib.rs"
-crate-type= ["cdylib","staticlib"]
+crate-type= ["cdylib","staticlib", "rlib"]
 
 
 #[[bin]]
@@ -17,6 +17,8 @@ crate-type= ["cdylib","staticlib"]
 unicode-normalization = "0.1.13"
 unicode_categories = "0.1.1"
 indexmap = "1.8.0"
+serde_json = "1.0"
+serde = { version = "1.0",  features = ["derive"]}
 
 [profile.rel_with_deb]
 inherits = "release"
