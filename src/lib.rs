@@ -3,6 +3,7 @@ extern crate unicode_categories;
 extern crate unicode_normalization;
 extern crate serde_json;
 extern crate serde;
+extern crate regex;
 use std::cell::RefCell;
 use std::ffi::CString;
 

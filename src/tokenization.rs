@@ -247,7 +247,9 @@ pub struct FullTokenizer {
     wordpiece_tokenizer: WordpieceTokenizer,
     pub cls_token_id: usize,
     pub sep_token_id: usize,
-    pub pad_token_id: usize
+    pub pad_token_id: usize,
+    pub unk_token_id: usize,
+    pub mask_token_id: usize
 }
 
 pub fn convert_tokens_to_ids(vocab: &IndexMap<String, usize>, tokens: &[String]) -> Vec<usize> {
@@ -295,6 +297,8 @@ impl FullTokenizer {
         let cls_token_id = *vocab.get("[CLS]").unwrap();
         let sep_token_id = *vocab.get("[SEP]").unwrap();
         let pad_token_id = *vocab.get("[PAD]").unwrap();
+        let unk_token_id = *vocab.get("[UNK]").unwrap();
+        let mask_token_id = *vocab.get("[MASK]").unwrap();
         let wordpiece_tokenizer = WordpieceTokenizer::new(vocab, inv_vocab, "[UNK]", 100);
 
         Ok(FullTokenizer {
@@ -302,7 +306,9 @@ impl FullTokenizer {
             wordpiece_tokenizer,
             cls_token_id,
             sep_token_id,
-            pad_token_id
+            pad_token_id,
+            unk_token_id,
+            mask_token_id
         })
     }
 

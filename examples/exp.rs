@@ -1,10 +1,27 @@
-
 use std::error::Error;
 
-use tcsivr::Judger;
-fn main() -> Result<(), Box<dyn Error>>{
-    let judger = Judger::new("/home/svn/frankfangli/code/rust/bert_tokenizer/ffi/x.json")?;
+struct Base {
+    a: i32,
+}
+impl Base {
+    pub fn echo(&self) {
+        println!("{}", self.a);
+    }
+}
 
+struct Der(Base);
 
+impl Der {
+    pub fn new() -> Self {
+        Der(Base { a: 1 })
+    }
+    pub fn echo(&self) {
+        self.0.echo();
+    }
+}
+
+fn main() -> Result<(), Box<dyn Error>> {
+    let der = Der::new();
+    der.echo();
     Ok(())
 }

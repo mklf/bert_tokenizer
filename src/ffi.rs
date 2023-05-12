@@ -69,11 +69,12 @@ pub fn judger_process(
         });
         return -2;
     }
+    // let bot = unsafe { CStr::from_ptr(*(texts.offset(input_size as isize - 2))) }.to_string_lossy();
 
-    let val = judger.get(query.as_ref());
-    if val != -1 {
-        return val;
-    }
+    // let val = judger.get(query.as_ref(), bot.as_ref());
+    // if val != -1 {
+    //     return val;
+    // }
 
     let max_length = max_length as usize;
     let mut ids = vec![];
@@ -82,7 +83,10 @@ pub fn judger_process(
         let text = judger.format(&text, i as usize);
         ids.push(judger.tokenizer.tokenize_to_ids(text));
     }
-    ids.push(judger.tokenizer.tokenize_to_ids(judger.prompt()));
+    let mut prompt_ids = judger.tokenizer.tokenize_to_ids(judger.prompt());
+    *prompt_ids.last_mut().unwrap() = judger.tokenizer.mask_token_id as _;
+    //rintln!("{}: {:?}", judger.prompt(), prompt_ids);
+    ids.push(prompt_ids);
     let mut context_input_ids: Vec<i32> = vec![];
     let mut current: Vec<i32> = vec![];
     if input_size > 0 {
@@ -174,19 +178,18 @@ mod test {
     use super::*;
     #[test]
     fn test_ok() {
-        unsafe {
-            let cs = CString::new(
-                "/home/svn/frankfangli/code/rust/bert_tokenizer/ffi/x.json".as_bytes(),
-            )
-            .unwrap();
-            let handle = create_judger(cs.as_ptr());
+        let cs =
+            CString::new("/home/svn/frankfangli/code/rust/bert_tokenizer/ffi/x.json".as_bytes())
+                .unwrap();
+        let handle = create_judger(cs.as_ptr());
 
-            let a = CString::new("我不知道那是我的孩子他们说买我看一下的".as_bytes()).unwrap();
-            let b = CString::new("咋了啊他了不了了".as_bytes()).unwrap();
+        let a = CString::new("喂，你好".as_bytes()).unwrap();
+        let b = CString::new("哎，你好，呃，我这边是植村秀线下专柜的".as_bytes()).unwrap();
+        let c = CString::new("".as_bytes()).unwrap();
+        let d = CString::new("2万".as_bytes()).unwrap();
 
-            let texts = [a.as_ptr(), b.as_ptr()];
+        let texts = [a.as_ptr(), b.as_ptr(), c.as_ptr(), d.as_ptr()];
 
-            judger_process(handle, texts.as_ptr(), 2, 128);
-        }
+        let _status = judger_process(handle, texts.as_ptr(), 4, 128);
     }
 }

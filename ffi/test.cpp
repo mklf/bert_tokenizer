@@ -9,7 +9,7 @@ int main(int argc, char* argv[]) {
   auto judger =
       tcs::Judger("x.json");
 
-  std::vector<std::string> texts = {"进入地理槽位多轮", "大海"};
+  std::vector<std::string> texts = {"喂，你好", "哎，你好，呃，我这边是植村秀线下专柜的", "", "2万"};
   std::vector<int32_t> input_ids, token_type_ids, attention_mask;
 
   int64_t ret_code =
