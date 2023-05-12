@@ -69,12 +69,12 @@ pub fn judger_process(
         });
         return -2;
     }
-    // let bot = unsafe { CStr::from_ptr(*(texts.offset(input_size as isize - 2))) }.to_string_lossy();
+    let bot = unsafe { CStr::from_ptr(*(texts.offset(input_size as isize - 2))) }.to_string_lossy();
 
-    // let val = judger.get(query.as_ref(), bot.as_ref());
-    // if val != -1 {
-    //     return val;
-    // }
+    let val = judger.get(query.as_ref(), bot.as_ref());
+    if val != -1 {
+        return val;
+    }
 
     let max_length = max_length as usize;
     let mut ids = vec![];
@@ -186,10 +186,11 @@ mod test {
         let a = CString::new("喂，你好".as_bytes()).unwrap();
         let b = CString::new("哎，你好，呃，我这边是植村秀线下专柜的".as_bytes()).unwrap();
         let c = CString::new("".as_bytes()).unwrap();
-        let d = CString::new("2万".as_bytes()).unwrap();
+        let d = CString::new("你是谁".as_bytes()).unwrap();
 
         let texts = [a.as_ptr(), b.as_ptr(), c.as_ptr(), d.as_ptr()];
 
-        let _status = judger_process(handle, texts.as_ptr(), 4, 128);
+        let status = judger_process(handle, texts.as_ptr(), 4, 128);
+        println!("status: {}", status);
     }
 }
